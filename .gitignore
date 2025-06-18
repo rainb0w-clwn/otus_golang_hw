@@ -1,28 +1,41 @@
 ### Go template
 # Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-go-cp
-go-envdir
-go-telnet
+**/*.exe
+**/*.exe~
+**/*.dll
+**/*.so
+**/*.dylib
+**/go-cp
+**/go-envdir
+**/go-telnet
 
 # Test binary, build with `go test -c`
-*.test
+**/*.test
 
 # Output of the go coverage tool, specifically when used with LiteIDE
-*.out
+**/*.out
 
 ### User defined
-.idea/
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-.vscode/
-*.bak
+**/.idea
+**/.DS_Store
+**/.DS_Store?
+**/._*
+**/.Spotlight-V100
+**/.Trashes
+**/ehthumbs.db
+**/Thumbs.db
+**/.vscode/
+**/*.bak
+
+**/cmake-build-*/
+**/*.iws
+**/out/
+**/.idea_modules/
+**/atlassian-ide-plugin.xml
+**/com_crashlytics_export_strings.xml
+**/crashlytics.properties
+**/crashlytics-build.properties
+**/fabric.properties
+**/go.work
+**/go.work.sum
+**/.env
