@@ -1,4 +1,4 @@
-module github.com/fixme_my_friend/hw02_unpack_string
+module github.com/rainb0w-clwn/otus_golang_hw/hw02_hello_otus
 
 go 1.23
 
