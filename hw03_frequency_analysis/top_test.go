@@ -7,7 +7,7 @@ import (
 )
 
 // Change to true if needed.
-var taskWithAsteriskIsCompleted = false
+var taskWithAsteriskIsCompleted = true
 
 var text = `Как видите, он  спускается  по  лестнице  вслед  за  своим
 	другом   Кристофером   Робином,   головой   вниз,  пересчитывая
@@ -42,6 +42,39 @@ var text = `Как видите, он  спускается  по  лестни�
 	иногда,  особенно  когда  папа  дома,  он больше любит тихонько
 	посидеть у огня и послушать какую-нибудь интересную сказку.
 		В этот вечер...`
+
+func TestGetSafeWord(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{input: "a", expected: "a"},
+		{input: "A", expected: "a"},
+		{input: ",", expected: ","}, // В условии оговорено, что только тире не является словом
+		{input: "-abc-", expected: "abc"},
+		{input: ".?!-abc?!-", expected: "abc"},
+		{input: ".?!-", expected: ".?!-"},
+		{input: ".?!-a-b-c,d.?!-", expected: "a-b-c,d"},
+		{input: "Нога", expected: "нога"},
+		{input: "нога!", expected: "нога"},
+		{input: "нога", expected: "нога"},
+		{input: "нога,", expected: "нога"},
+		{input: "'нога'", expected: "нога"},
+		{input: "какой-то", expected: "какой-то"},
+		{input: "какойто", expected: "какойто"},
+		{input: "dog,cat", expected: "dog,cat"},
+		{input: "dog...cat", expected: "dog...cat"},
+		{input: "-------", expected: "-------"},
+		{input: "-", expected: ""},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			result := GetSafeWord(tc.input)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
 
 func TestTop10(t *testing.T) {
 	t.Run("no words in empty string", func(t *testing.T) {
