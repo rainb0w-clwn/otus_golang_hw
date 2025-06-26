@@ -3,6 +3,7 @@ package hw04lrucache
 import (
 	"math/rand"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 
@@ -50,7 +51,47 @@ func TestCache(t *testing.T) {
 	})
 
 	t.Run("purge logic", func(t *testing.T) {
-		// Write me
+		c := NewCache(5)
+
+		wasInCache := c.Set("aaa", 100)
+		require.False(t, wasInCache)
+		wasInCache = c.Set("bbb", 200)
+		require.False(t, wasInCache)
+
+		c.Clear()
+
+		_, ok := c.Get("aaa")
+		require.False(t, ok)
+		_, ok = c.Get("bbb")
+		require.False(t, ok)
+	})
+
+	t.Run("push by capacity logic", func(t *testing.T) {
+		capacity := 3
+		c := NewCache(capacity)
+		for i := 1; i <= capacity; i++ {
+			c.Set(Key(strings.Repeat("a", i)), i)
+		}
+		c.Set("b", 100)
+		_, ok := c.Get("a")
+		require.False(t, ok)
+	})
+
+	t.Run("push by old logic", func(t *testing.T) {
+		capacity := 3
+		c := NewCache(capacity)
+		for i := 1; i <= capacity; i++ {
+			c.Set(Key(strings.Repeat("a", i)), i)
+		}
+		// Trying to make the last added key "aaa" the oldest
+		c.Get("aa")
+		c.Get("aaa")
+		c.Get("a")
+		c.Set("a", 100)
+		c.Set("aa", 100)
+		c.Set("b", 100)
+		_, ok := c.Get("aaa")
+		require.False(t, ok)
 	})
 }
 
