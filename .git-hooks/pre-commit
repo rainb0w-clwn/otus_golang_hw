@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# Get branch name and description
+BRANCH_NAME=$(git branch | grep '*' | sed 's/* //')
+
+cd $BRANCH_NAME || { echo "no dir with name $BRANCH_NAME"; exit 127; }
+
+if [[ "$BRANCH_NAME" =~ "calendar" ]]; then
+  make lint
+else
+  golangci-lint run --fix
+fi
+
+# DO THIS ONETIME BEFORE ANY COMMIT/PUSH
+# $ git config core.hooksPath .git-hooks
