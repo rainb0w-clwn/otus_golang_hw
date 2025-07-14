@@ -1,0 +1,25 @@
+#!/bin/sh
+
+# Get branch name and description
+BRANCH_NAME=$(git branch | grep '*' | sed 's/* //')
+
+cd $BRANCH_NAME || { echo "no dir with name $BRANCH_NAME"; exit 127; }
+
+if [[ "$BRANCH_NAME" =~ "calendar" ]]; then
+  make lint
+  make build
+  make test
+else
+  golangci-lint run --fix
+  go test -v -count=1 -race -timeout=1m ./...
+  if [[ "hw10_program_optimization" =~ "$BRANCH_NAME" ]]; then
+    go test -v -count=1 -timeout=1m -tags bench ./...
+  fi
+  if [[ "hw01_hello_otus hw07_file_copying hw08_envdir_tool hw11_telnet_client" =~ "$BRANCH_NAME" ]]; then
+    ./test.sh
+  fi
+fi
+
+
+# DO THIS ONETIME BEFORE ANY COMMIT/PUSH
+# $ git config core.hooksPath .git-hooks
