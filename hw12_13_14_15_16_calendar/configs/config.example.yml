@@ -1,0 +1,11 @@
+logger:
+  level: "debug"
+http:
+  host: "0.0.0.0"
+  port: 3000
+  readTimeout: 1s
+  writeTimeout: 1s
+db:
+  dsn: "postgres://postgres:postgres@0.0.0.0:5432/db"
+  migrationsDir: "./migrations/"
+storage: "memory"
