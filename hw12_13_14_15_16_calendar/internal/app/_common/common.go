@@ -5,17 +5,10 @@ import (
 	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/storage"
 )
 
-type Logger interface {
-	logger.Logger
-}
-
-type Storage = storage.Storage
-
 type Deps struct {
-	Storage Storage
-	Logger  Logger
+	Storage storage.Storage
+	Logger  logger.Logger
 }
-
 
 var LevelMap = map[string]logger.Level{
 	"debug":   logger.Debug,

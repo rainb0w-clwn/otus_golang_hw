@@ -6,58 +6,77 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/entity"
-	common "github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/server/_common"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	proto "github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/api"
+	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/config"
+	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/logger"
 	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/server/http/log"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
-type Server struct {
-	server http.Server
-	logger common.Logger
+type Options struct {
+	Host, Port                string
+	ReadTimeout, WriteTimeout time.Duration
 }
 
-type Application interface {
-	CreateEvent(event entity.Event) (string, error)
-	UpdateEvent(id string, event entity.Event) error
-	DeleteEvent(id string) error
-	GetDayEvents(day time.Time) (*entity.Events, error)
-	GetWeekEvents(weekStart time.Time) (*entity.Events, error)
-	GetMonthEvents(monthStart time.Time) (*entity.Events, error)
+type Server interface {
+	Start(context.Context) error
+	Stop(context.Context) error
 }
 
-func NewServer(options common.Options, logger common.Logger, app Application) *Server {
-	return &Server{
-		server: http.Server{
-			Addr:         net.JoinHostPort(options.Host, options.Port),
-			Handler:      log.NewHandler(logger, NewHandler(app, logger)),
-			ReadTimeout:  options.ReadTimeout,
-			WriteTimeout: options.WriteTimeout,
-		},
-		logger: logger,
+type server struct {
+	*http.Server
+	logger logger.Logger
+}
+
+func New(options Options, logger logger.Logger) Server {
+	serverHTTP := &http.Server{
+		Addr:         net.JoinHostPort(options.Host, options.Port),
+		ReadTimeout:  options.ReadTimeout,
+		WriteTimeout: options.WriteTimeout,
+	}
+	return &server{
+		serverHTTP,
+		logger,
 	}
 }
 
-func (s *Server) Start(_ context.Context) error {
-	err := s.server.ListenAndServe()
+func (s *server) Start(ctx context.Context) error {
+	cfg := config.GetFromContext(ctx)
+	if cfg == nil {
+		return config.ErrNoConfigInContext
+	}
+
+	conn, err := grpc.NewClient(
+		net.JoinHostPort(cfg.GRPC.Host, cfg.GRPC.Port),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		return err
 	}
-	return nil
-}
 
-func (s *Server) Stop(ctx context.Context) error {
-	err := s.server.Shutdown(ctx)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func NewHandler(_ Application, logger common.Logger) http.HandlerFunc {
-	return func(writer http.ResponseWriter, _ *http.Request) {
-		_, err := writer.Write([]byte("Hello World"))
-		if err != nil {
-			logger.Error(err.Error())
+	mux := runtime.NewServeMux()
+	for _, f := range []func(context.Context, *runtime.ServeMux, *grpc.ClientConn) error{
+		proto.RegisterEventServiceHandler,
+	} {
+		if err = f(ctx, mux, conn); err != nil {
+			return err
 		}
 	}
+	s.Handler = log.NewHandler(s.logger, mux)
+
+	err = s.ListenAndServe()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *server) Stop(ctx context.Context) error {
+	err := s.Shutdown(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
 }

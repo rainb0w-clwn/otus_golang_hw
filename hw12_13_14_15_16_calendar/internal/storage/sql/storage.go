@@ -5,226 +5,205 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib" // driver import
+	"github.com/jmoiron/sqlx"
 	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/config"
 	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/entity"
 )
 
 type PgStorage struct {
-	db  *sql.DB
+	db  *sqlx.DB
 	ctx context.Context
 }
 
-// TODO struct value reading.
 type sqlEvent struct {
-	ID          string
-	UserID      int
-	Title       string
-	DateTime    time.Time
-	Description sql.NullString
-	Duration    sql.NullString
-	RemindTime  sql.NullString
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          string         `db:"id"`
+	UserID      int            `db:"user_id"`
+	Title       string         `db:"title"`
+	DateTime    time.Time      `db:"datetime"`
+	Description sql.NullString `db:"description"`
+	Duration    sql.NullString `db:"duration"`
+	RemindTime  sql.NullTime   `db:"remind_time"`
+	CreatedAt   time.Time      `db:"created_at"`
+	UpdatedAt   time.Time      `db:"updated_at"`
 }
 
 var ErrConnectFailed = errors.New("error connecting to db")
 
-const (
-	tableName          = "event"
-	tableColumnsRead   = "id,user_id,title,description,datetime,duration,remind_time,created_at,updated_at"
-	tableColumnsInsert = "user_id,title,description,datetime,duration,remind_time"
-)
-
 func (s *PgStorage) Create(event entity.Event) (string, error) {
-	err := s.db.QueryRowContext(
-		s.ctx,
-		fmt.Sprintf("INSERT INTO %s(%s) VALUES($1,$2,$3,$4,$5,$6) RETURNING id", tableName, tableColumnsInsert),
-		strconv.Itoa(event.UserID),
-		event.Title,
-		event.Description,
-		event.DateTime.Format(time.RFC3339),
-		event.Duration,
-		event.RemindTime,
-	).Scan(&event.ID)
+	query := `
+		INSERT INTO event (
+			user_id, title, description, datetime, duration, remind_time
+		) VALUES (
+			:user_id, :title, :description, :datetime, :duration, :remind_time
+		)
+		RETURNING id
+	`
+
+	params := map[string]any{
+		"user_id":     event.UserID,
+		"title":       event.Title,
+		"description": event.Description,
+		"datetime":    event.DateTime,
+		"duration":    event.Duration,
+		"remind_time": event.RemindTime,
+	}
+
+	var id string
+	stmt, err := s.db.PrepareNamedContext(s.ctx, query)
 	if err != nil {
 		return "", err
 	}
+	defer stmt.Close()
 
-	return event.ID, nil
+	if err = stmt.GetContext(s.ctx, &id, params); err != nil {
+		return "", err
+	}
+
+	return id, nil
 }
 
 func (s *PgStorage) GetByID(id string) (*entity.Event, error) {
-	event := sqlEvent{}
+	query := `
+		SELECT *
+		FROM event
+		WHERE id = :id
+	`
 
-	err := s.db.QueryRowContext(
+	var se sqlEvent
+	err := s.db.GetContext(
 		s.ctx,
-		fmt.Sprintf("SELECT %s FROM %s WHERE id=$1", tableColumnsRead, tableName),
-		id,
-	).Scan(
-		&event.ID,
-		&event.UserID,
-		&event.Title,
-		&event.Description,
-		&event.DateTime,
-		&event.Duration,
-		&event.RemindTime,
-		&event.CreatedAt,
-		&event.UpdatedAt,
+		&se,
+		query,
+		map[string]any{"id": id},
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err = entity.ErrEventNotFound
+			return nil, entity.ErrEventNotFound
 		}
-
 		return nil, err
 	}
 
-	return s.sqlEventToEvent(&event), nil
+	return s.sqlEventToEvent(&se), nil
 }
 
 func (s *PgStorage) GetAll() (*entity.Events, error) {
-	events := entity.Events{}
+	query := `SELECT * FROM event`
 
-	rows, err := s.db.QueryContext(s.ctx, fmt.Sprintf("SELECT %s FROM %s", tableColumnsRead, tableName))
-	if err != nil {
+	var rows []sqlEvent
+	if err := s.db.SelectContext(s.ctx, &rows, query); err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		event := sqlEvent{}
-		err = rows.Scan(
-			&event.ID,
-			&event.UserID,
-			&event.Title,
-			&event.Description,
-			&event.DateTime,
-			&event.Duration,
-			&event.RemindTime,
-			&event.CreatedAt,
-			&event.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		events = append(events, *s.sqlEventToEvent(&event))
-	}
-
-	err = rows.Err()
-	if err != nil {
-		return nil, err
+	events := make(entity.Events, 0, len(rows))
+	for _, r := range rows {
+		events = append(events, *s.sqlEventToEvent(&r))
 	}
 
 	return &events, nil
 }
 
 func (s *PgStorage) Update(event entity.Event) error {
-	_, err := s.db.ExecContext(
-		s.ctx,
-		fmt.Sprintf(
-			`
-UPDATE %s SET user_id=$1, title=$2, description=$3, datetime=$4, duration=$5, remind_time=$6, updated_at=now() " +
-WHERE id=$7`,
-			tableName,
-		),
-		event.UserID,
-		event.Title,
-		event.Description,
-		event.DateTime.Format(time.RFC3339),
-		event.Duration,
-		event.RemindTime,
-		event.ID,
-	)
-	// TODO return updated_at
-	if err != nil {
-		return err
+	query := `
+		UPDATE event SET
+			user_id     = :user_id,
+			title       = :title,
+			description = :description,
+			datetime    = :datetime,
+			duration    = :duration,
+			remind_time = :remind_time,
+			updated_at  = now()
+		WHERE id = :id
+	`
+
+	params := map[string]any{
+		"id":          event.ID,
+		"user_id":     event.UserID,
+		"title":       event.Title,
+		"description": event.Description,
+		"datetime":    event.DateTime,
+		"duration":    event.Duration,
+		"remind_time": event.RemindTime,
 	}
 
-	return nil
+	_, err := s.db.NamedExecContext(s.ctx, query, params)
+	return err
 }
 
 func (s *PgStorage) Delete(id string) error {
-	_, err := s.db.ExecContext(s.ctx, fmt.Sprintf("DELETE FROM %s where id=$1", tableName), id)
-	if err != nil {
-		return err
-	}
+	query := `
+		DELETE FROM event
+		WHERE id = :id
+	`
 
-	return nil
+	_, err := s.db.NamedExecContext(
+		s.ctx,
+		query,
+		map[string]any{"id": id},
+	)
+	return err
 }
 
 func (s *PgStorage) GetForPeriod(start time.Time, end time.Time) (*entity.Events, error) {
-	events := entity.Events{}
+	query := `
+		SELECT *
+		FROM event
+		WHERE datetime BETWEEN :start AND :end
+	`
 
-	rows, err := s.db.QueryContext(
+	var rows []sqlEvent
+	err := s.db.SelectContext(
 		s.ctx,
-		fmt.Sprintf("SELECT %s FROM %s WHERE datetime BETWEEN $1 AND $2", tableColumnsRead, tableName),
-		start,
-		end,
+		&rows,
+		query,
+		map[string]any{
+			"start": start,
+			"end":   end,
+		},
 	)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		event := sqlEvent{}
-		err = rows.Scan(
-			&event.ID,
-			&event.UserID,
-			&event.Title,
-			&event.Description,
-			&event.DateTime,
-			&event.Duration,
-			&event.RemindTime,
-			&event.CreatedAt,
-			&event.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		events = append(events, *s.sqlEventToEvent(&event))
-	}
-
-	err = rows.Err()
-	if err != nil {
-		return nil, err
+	events := make(entity.Events, 0, len(rows))
+	for _, r := range rows {
+		events = append(events, *s.sqlEventToEvent(&r))
 	}
 
 	return &events, nil
 }
 
 func (s *PgStorage) GetForTime(t time.Time) (*entity.Event, error) {
-	event := sqlEvent{}
+	query := `
+		SELECT *
+		FROM event
+		WHERE datetime = :datetime
+	`
 
-	err := s.db.QueryRowContext(
+	stmt, err := s.db.PrepareNamedContext(s.ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	var se sqlEvent
+	err = stmt.GetContext(
 		s.ctx,
-		fmt.Sprintf("SELECT %s FROM %s WHERE datetime=$1", tableColumnsRead, tableName), t,
-	).Scan(
-		&event.ID,
-		&event.UserID,
-		&event.Title,
-		&event.Description,
-		&event.DateTime,
-		&event.Duration,
-		&event.RemindTime,
-		&event.CreatedAt,
-		&event.UpdatedAt,
+		&se,
+		map[string]any{
+			"datetime": t,
+		},
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err = entity.ErrEventNotFound
+			return nil, entity.ErrEventNotFound
 		}
-
 		return nil, err
 	}
 
-	return s.sqlEventToEvent(&event), nil
+	return s.sqlEventToEvent(&se), nil
 }
 
 func New() *PgStorage {
@@ -237,54 +216,51 @@ func (s *PgStorage) Connect(ctx context.Context) error {
 		return ErrConnectFailed
 	}
 
-	db, openErr := sql.Open("postgres", cfg.DB.Dsn)
-	if openErr != nil {
-		return fmt.Errorf(ErrConnectFailed.Error()+":%w", openErr)
+	db, err := sqlx.Open("pgx", cfg.DB.Dsn)
+	if err != nil {
+		return fmt.Errorf(ErrConnectFailed.Error()+":%w", err)
 	}
 
-	pingErr := db.PingContext(ctx)
-	if pingErr != nil {
-		return fmt.Errorf(ErrConnectFailed.Error()+":%w", pingErr)
+	if err = db.PingContext(ctx); err != nil {
+		return fmt.Errorf(ErrConnectFailed.Error()+":%w", err)
 	}
 
 	s.db = db
 	s.ctx = ctx
-
 	return nil
 }
 
 func (s *PgStorage) Close(_ context.Context) error {
-	closeErr := s.db.Close()
-	if closeErr != nil {
-		return closeErr
+	if s.db == nil {
+		return nil
 	}
 
+	err := s.db.Close()
+	s.db = nil
 	s.ctx = nil
 
-	return nil
+	return err
 }
 
-func (s *PgStorage) sqlEventToEvent(sqlEvent *sqlEvent) *entity.Event {
-	event := entity.Event{}
-
-	event.ID = sqlEvent.ID
-	event.UserID = sqlEvent.UserID
-	event.Title = sqlEvent.Title
-	event.DateTime = sqlEvent.DateTime
-	event.CreatedAt = sqlEvent.CreatedAt
-	event.UpdatedAt = sqlEvent.UpdatedAt
-
-	if sqlEvent.Description.Valid {
-		event.Description = sqlEvent.Description.String
+func (s *PgStorage) sqlEventToEvent(se *sqlEvent) *entity.Event {
+	e := &entity.Event{
+		ID:        se.ID,
+		UserID:    se.UserID,
+		Title:     se.Title,
+		DateTime:  se.DateTime,
+		CreatedAt: se.CreatedAt,
+		UpdatedAt: se.UpdatedAt,
 	}
 
-	if sqlEvent.Duration.Valid {
-		event.Duration = sqlEvent.Duration.String
+	if se.Description.Valid {
+		e.Description = se.Description.String
+	}
+	if se.Duration.Valid {
+		e.Duration = se.Duration.String
+	}
+	if se.RemindTime.Valid {
+		e.RemindTime = se.RemindTime.Time
 	}
 
-	if sqlEvent.RemindTime.Valid {
-		event.RemindTime = sqlEvent.RemindTime.String
-	}
-
-	return &event
+	return e
 }

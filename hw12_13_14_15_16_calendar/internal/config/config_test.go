@@ -17,6 +17,10 @@ http:
   port: 3000
   readTimeout: 5s
   writeTimeout: 10s
+grpc:
+  host: "localhost"
+  port: 50051
+  connectTimeout: 5s
 db:
   dsn: "postgres://user:pass@localhost:5432/db"
   migrationsDir: "./migrations/"
@@ -32,6 +36,9 @@ func TestNewConfig(t *testing.T) {
 	require.Equal(t, "3000", cfg.HTTP.Port)
 	require.Equal(t, 5*time.Second, cfg.HTTP.ReadTimeout)
 	require.Equal(t, 10*time.Second, cfg.HTTP.WriteTimeout)
+	require.Equal(t, "localhost", cfg.GRPC.Host)
+	require.Equal(t, "50051", cfg.GRPC.Port)
+	require.Equal(t, 5*time.Second, cfg.GRPC.ConnectTimeout)
 	require.Equal(t, "postgres://user:pass@localhost:5432/db", cfg.DB.Dsn)
 	require.Equal(t, "./migrations/", cfg.DB.MigrationsDir)
 	require.Equal(t, "memory", cfg.Storage)

@@ -3,20 +3,22 @@ package app
 import (
 	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/app/_common"
 	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/app/event"
+	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/logger"
+	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/storage"
 )
 
 type App struct {
 	*common.Deps
-	Event event.App
+	*event.App
 }
 
-func New(logger common.Logger, storage common.Storage) *App {
+func New(logger logger.Logger, storage storage.Storage) *App {
 	deps := &common.Deps{
 		Logger:  logger,
 		Storage: storage,
 	}
 	return &App{
-		Deps:  deps,
-		Event: event.App{Deps: deps},
+		Deps: deps,
+		App:  &event.App{Deps: deps},
 	}
 }

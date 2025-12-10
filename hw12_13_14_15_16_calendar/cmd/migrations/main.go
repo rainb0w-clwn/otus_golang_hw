@@ -33,20 +33,19 @@ func run() int {
 
 	configR, err := os.Open(configFile)
 	if err != nil {
-		log.Println("Error opening config file.")
+		log.Printf("%s", "Error opening config file: "+err.Error())
 		return 1
 	}
 
 	cfg, err := config.New(configR)
 	if err != nil {
-		log.Println("Error parsing config file.")
+		log.Printf("%s", "Error parsing config file: "+err.Error())
 		return 1
 	}
 
-	db, err := goose.OpenDBWithDriver("postgres", cfg.DB.Dsn)
+	db, err := goose.OpenDBWithDriver("pgx", cfg.DB.Dsn)
 	if err != nil {
-		log.Printf("goose: failed to open DB: %v\n\n", err)
-
+		log.Printf("goose: failed to open DB: %s", err.Error())
 		return 1
 	}
 

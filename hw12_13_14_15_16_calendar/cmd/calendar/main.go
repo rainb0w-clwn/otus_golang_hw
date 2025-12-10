@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
@@ -14,8 +16,9 @@ import (
 	common "github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/app/_common"
 	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/config"
 	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/logger"
-	servercommon "github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/server/_common"
-	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/server/http"
+	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/server"
+	serverGRPC "github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/server/grpc"
+	serverHTTP "github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/server/http"
 	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/storage"
 )
 
@@ -43,13 +46,13 @@ func run() int {
 
 	configR, err := os.Open(configFile)
 	if err != nil {
-		log.Println("Error opening config file.")
+		log.Printf("%s", "Error opening config file: "+err.Error())
 		return 1
 	}
 
 	cfg, err := config.New(configR)
 	if err != nil {
-		log.Println("Error parsing config file.")
+		log.Printf("%s", "Error parsing config file: "+err.Error())
 		return 1
 	}
 	ctx = cfg.WithContext(ctx)
@@ -58,49 +61,75 @@ func run() int {
 
 	st, err := storage.Get(cfg.Storage)
 	if err != nil {
-		log.Println("Error getting storage.")
+		logg.Error("Error getting storage: " + err.Error())
 		return 1
 	}
 
 	err = st.Connect(ctx)
 	if err != nil {
-		log.Println("Error init storage.")
+		logg.Error("Error init storage: " + err.Error())
 		return 1
 	}
 
-	srv := server.NewServer(
-		servercommon.Options{
-			Host:         cfg.HTTP.Host,
-			Port:         cfg.HTTP.Port,
-			ReadTimeout:  cfg.HTTP.ReadTimeout,
-			WriteTimeout: cfg.HTTP.WriteTimeout,
+	srv := server.New(
+		server.Options{
+			GRPC: serverGRPC.Options{
+				Host:           cfg.GRPC.Host,
+				Port:           cfg.GRPC.Port,
+				ConnectTimeout: cfg.GRPC.ConnectTimeout,
+			},
+			HTTP: serverHTTP.Options{
+				Host:         cfg.HTTP.Host,
+				Port:         cfg.HTTP.Port,
+				ReadTimeout:  cfg.HTTP.ReadTimeout,
+				WriteTimeout: cfg.HTTP.WriteTimeout,
+			},
 		},
 		logg,
-		app.New(logg, st).Event,
+		app.New(logg, st),
 	)
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-
+	wg.Add(3)
 	go func() {
+		defer wg.Done()
+
+		logg.Info("GRPC server starting...")
+		err := (*srv.GRPC).Start(ctx)
+		if err != nil {
+			logg.Error("Failed to start GRPC server: " + err.Error())
+			cancel()
+		}
+	}()
+	go func() {
+		defer wg.Done()
+
+		logg.Info("HTTP server starting...")
+		err := (*srv.HTTP).Start(ctx)
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logg.Error("Failed to start HTTP server: " + err.Error())
+			cancel()
+		}
+	}()
+	go func() {
+		defer wg.Done()
 		<-ctx.Done()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 		defer cancel()
 
-		if err := srv.Stop(ctx); err != nil {
-			logg.Error("failed to stop http server: " + err.Error())
+		logg.Info("GRPC server stopping...")
+		if err := (*srv.GRPC).Stop(ctx); err != nil {
+			logg.Error("Failed to stop GRPC server: " + err.Error())
 		}
-		logg.Info("calendar stopped.")
+
+		logg.Info("HTTP server stopping...")
+		if err := (*srv.HTTP).Stop(ctx); err != nil {
+			logg.Error("Failed to stop HTTP server: " + err.Error())
+		}
+
+		logg.Info("Calendar stopped")
 	}()
-
-	logg.Info("calendar is running...")
-
-	if err := srv.Start(ctx); err != nil {
-		logg.Error("failed to start http server: " + err.Error())
-		cancel()
-		return 1
-	}
 
 	wg.Wait()
 

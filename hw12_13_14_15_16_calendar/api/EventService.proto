@@ -2,6 +2,65 @@ syntax = "proto3";
 
 package event;
 
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/proto";
+
+service EventService {
+  rpc CreateEvent(CreateRequest) returns (CreateResponse) {}
+  rpc UpdateEvent(UpdateRequest) returns (UpdateResponse) {}
+  rpc DeleteEvent(DeleteRequest) returns (DeleteResponse) {}
+
+  rpc GetDayEvents(StartDate) returns (Events) {}
+  rpc GetWeekEvents(StartDate) returns (Events) {}
+  rpc GetMonthEvents(StartDate) returns (Events) {}
+}
+
+message CreateRequest {
+  EventData event_data = 1;
+}
+
+message UpdateRequest {
+  EventId event_id = 1;
+  EventData event_data = 2;
+}
+
+message DeleteRequest {
+  EventId event_id = 1;
+}
+
+message CreateResponse {
+  EventId event_id = 1;
+}
+
+message UpdateResponse {}
+
+message DeleteResponse {}
+
+message Events {
+  repeated Event events = 1;
+}
+
 message Event {
-    // TODO
+  EventId event_id = 1;
+  EventData event_data = 2;
+}
+
+message EventData {
+  int64 user_id = 1;
+  string title = 2;
+  google.protobuf.Timestamp date_time = 3;
+  string description = 4;
+  string duration = 5;
+  google.protobuf.Timestamp remind_time = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message EventId {
+  string id = 1;
+}
+
+message StartDate {
+  google.protobuf.Timestamp start_date = 1;
 }

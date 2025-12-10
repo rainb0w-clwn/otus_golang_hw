@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/server/_common"
+	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/logger"
 )
 
-func NewHandler(logger common.Logger, next http.Handler) http.HandlerFunc {
+func NewHandler(logger logger.Logger, next http.Handler) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		lrw := &loggingResponseWriter{writer, http.StatusOK}
 

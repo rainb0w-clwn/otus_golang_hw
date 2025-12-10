@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"errors"
 	"io"
 	"time"
 
@@ -14,6 +15,8 @@ const (
 	ctxKey key = iota
 )
 
+var ErrNoConfigInContext = errors.New("no config found in context")
+
 type Config struct {
 	Logger struct {
 		Level string `yaml:"level"`
@@ -24,6 +27,11 @@ type Config struct {
 		ReadTimeout  time.Duration `yaml:"readTimeout"`
 		WriteTimeout time.Duration `yaml:"writeTimeout"`
 	} `yaml:"http"`
+	GRPC struct {
+		Host           string        `yaml:"host"`
+		Port           string        `yaml:"port"`
+		ConnectTimeout time.Duration `yaml:"connectTimeout"`
+	} `yaml:"grpc"`
 	DB struct {
 		Dsn           string `yaml:"dsn"`
 		MigrationsDir string `yaml:"migrationsDir"`
