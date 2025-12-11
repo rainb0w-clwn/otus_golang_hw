@@ -146,3 +146,23 @@ func (a App) GetMonthEvents(monthStart time.Time) (*entity.Events, error) {
 
 	return events, nil
 }
+
+func (a App) DeleteEventsOlderThan(t time.Time) error {
+	return a.Storage.DeleteOlderThan(t)
+}
+
+func (a App) GetEventsForRemind() (*entity.Events, error) {
+	events, err := a.Storage.GetForRemind()
+	if err != nil {
+		return nil, err
+	}
+	return events, nil
+}
+
+func (a App) MarkEventAsReminded(id string) error {
+	err := a.Storage.MarkAsReminded(id)
+	if err != nil {
+		return err
+	}
+	return nil
+}

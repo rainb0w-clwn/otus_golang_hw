@@ -1,1 +1,37 @@
-version: "3"
+services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: "otus_golang_hw"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d otus_golang_hw" ]
+      interval: 3s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    volumes:
+      - calendar-otus-pg:/var/lib/postgresql/data
+  rabbitmq:
+    image: rabbitmq
+    hostname: rabbitmq
+    restart: always
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    ports:
+      - 5672:5672
+    volumes:
+      - calendar-otus-rabbitmq:/var/lib/rabbitmq
+volumes:
+  calendar-otus-pg:
+  calendar-otus-rabbitmq:

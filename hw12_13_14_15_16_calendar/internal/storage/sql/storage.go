@@ -19,15 +19,16 @@ type PgStorage struct {
 }
 
 type sqlEvent struct {
-	ID          string         `db:"id"`
-	UserID      int            `db:"user_id"`
-	Title       string         `db:"title"`
-	DateTime    time.Time      `db:"datetime"`
-	Description sql.NullString `db:"description"`
-	Duration    sql.NullString `db:"duration"`
-	RemindTime  sql.NullTime   `db:"remind_time"`
-	CreatedAt   time.Time      `db:"created_at"`
-	UpdatedAt   time.Time      `db:"updated_at"`
+	ID             string         `db:"id"`
+	UserID         int            `db:"user_id"`
+	Title          string         `db:"title"`
+	DateTime       time.Time      `db:"datetime"`
+	Description    sql.NullString `db:"description"`
+	Duration       sql.NullString `db:"duration"`
+	RemindTime     sql.NullTime   `db:"remind_time"`
+	RemindSentTime sql.NullTime   `db:"remind_sent_time"`
+	CreatedAt      time.Time      `db:"created_at"`
+	UpdatedAt      time.Time      `db:"updated_at"`
 }
 
 var ErrConnectFailed = errors.New("error connecting to db")
@@ -99,7 +100,7 @@ func (s *PgStorage) GetAll() (*entity.Events, error) {
 
 	events := make(entity.Events, 0, len(rows))
 	for _, r := range rows {
-		events = append(events, *s.sqlEventToEvent(&r))
+		events = append(events, s.sqlEventToEvent(&r))
 	}
 
 	return &events, nil
@@ -169,7 +170,7 @@ func (s *PgStorage) GetForPeriod(start time.Time, end time.Time) (*entity.Events
 
 	events := make(entity.Events, 0, len(rows))
 	for _, r := range rows {
-		events = append(events, *s.sqlEventToEvent(&r))
+		events = append(events, s.sqlEventToEvent(&r))
 	}
 
 	return &events, nil
@@ -206,14 +207,69 @@ func (s *PgStorage) GetForTime(t time.Time) (*entity.Event, error) {
 	return s.sqlEventToEvent(&se), nil
 }
 
+func (s *PgStorage) GetForRemind() (*entity.Events, error) {
+	query := `
+		SELECT *
+		FROM event
+		WHERE remind_sent_time IS NULL AND now() >= remind_time
+	`
+
+	var rows []sqlEvent
+	err := s.db.SelectContext(
+		s.ctx,
+		&rows,
+		query,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	events := make(entity.Events, 0, len(rows))
+	for _, r := range rows {
+		events = append(events, s.sqlEventToEvent(&r))
+	}
+
+	return &events, nil
+}
+
+func (s *PgStorage) MarkAsReminded(id string) error {
+	query := `
+		UPDATE event SET
+			remind_sent_time = now(),
+			updated_at  = now()
+		WHERE id = :id
+	`
+
+	params := map[string]any{
+		"id": id,
+	}
+
+	_, err := s.db.NamedExecContext(s.ctx, query, params)
+	return err
+}
+
 func New() *PgStorage {
 	return &PgStorage{}
+}
+
+func (s *PgStorage) DeleteOlderThan(t time.Time) error {
+	query := `
+		DELETE event
+		WHERE datetime < :time
+	`
+
+	params := map[string]any{
+		"time": t,
+	}
+
+	_, err := s.db.NamedExecContext(s.ctx, query, params)
+	return err
 }
 
 func (s *PgStorage) Connect(ctx context.Context) error {
 	cfg := config.GetFromContext(ctx)
 	if cfg == nil {
-		return ErrConnectFailed
+		return config.ErrNoConfigInContext
 	}
 
 	db, err := sqlx.Open("pgx", cfg.DB.Dsn)

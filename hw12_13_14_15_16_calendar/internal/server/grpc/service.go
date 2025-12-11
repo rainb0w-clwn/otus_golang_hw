@@ -104,7 +104,7 @@ func (s Service) entities2Proto(entityEvents *entity.Events) *proto.Events {
 	return &proto.Events{Events: protoEvents}
 }
 
-func (s Service) entity2Proto(entityEvent entity.Event) *proto.Event {
+func (s Service) entity2Proto(entityEvent *entity.Event) *proto.Event {
 	return &(proto.Event{
 		EventId: &proto.EventId{Id: entityEvent.ID},
 		EventData: &proto.EventData{

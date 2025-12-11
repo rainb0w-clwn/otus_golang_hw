@@ -15,10 +15,10 @@ const (
 )
 
 type Logger interface {
-	Debug(string)
-	Info(string)
-	Warning(string)
-	Error(string)
+	Debug(string, ...interface{})
+	Info(string, ...interface{})
+	Warning(string, ...interface{})
+	Error(string, ...interface{})
 }
 type SLogger struct {
 	Level  Level
@@ -32,35 +32,35 @@ func New(level Level, writer io.Writer) Logger {
 	}
 }
 
-func (l *SLogger) Debug(msg string) {
+func (l *SLogger) Debug(msg string, args ...interface{}) {
 	if l.Level > Debug {
 		return
 	}
-	l.log("DEBUG: ", msg)
+	l.log("DEBUG: ", msg, args...)
 }
 
-func (l *SLogger) Info(msg string) {
+func (l *SLogger) Info(msg string, args ...interface{}) {
 	if l.Level > Info {
 		return
 	}
-	l.log("INFO: ", msg)
+	l.log("INFO: ", msg, args...)
 }
 
-func (l *SLogger) Warning(msg string) {
+func (l *SLogger) Warning(msg string, args ...interface{}) {
 	if l.Level > Warning {
 		return
 	}
-	l.log("WARN: ", msg)
+	l.log("WARN: ", msg, args...)
 }
 
-func (l *SLogger) Error(msg string) {
+func (l *SLogger) Error(msg string, args ...interface{}) {
 	if l.Level > Error {
 		return
 	}
-	l.log("ERROR: ", msg)
+	l.log("ERROR: ", msg, args...)
 }
 
-func (l *SLogger) log(prefix, msg string) {
+func (l *SLogger) log(prefix, msg string, args ...interface{}) {
 	l.logger.SetPrefix(prefix)
-	l.logger.Println(msg)
+	l.logger.Printf(msg+"\n", args...)
 }
