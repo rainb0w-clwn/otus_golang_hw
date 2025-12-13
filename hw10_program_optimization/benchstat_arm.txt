@@ -1,0 +1,15 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/rainb0w-clwn/otus_golang_hw/hw10_program_optimization
+cpu: Apple M1 Pro
+                │     old.txt     │               new.txt                │
+                │     sec/op      │   sec/op     vs base                 │
+GetDomainStat-8   79471.280µ ± 2%   2.731µ ± 4%  -100.00% (p=0.000 n=10)
+
+                │      old.txt      │                new.txt                │
+                │       B/op        │     B/op      vs base                 │
+GetDomainStat-8   132856.700Ki ± 0%   5.375Ki ± 0%  -100.00% (p=0.000 n=10)
+
+                │     old.txt     │               new.txt               │
+                │    allocs/op    │ allocs/op   vs base                 │
+GetDomainStat-8   1700090.00 ± 0%   15.00 ± 0%  -100.00% (p=0.000 n=10)

@@ -56,7 +56,7 @@ func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 
 		eDomain := strings.ToLower(user.Email[at+1:])
 
-		if strings.HasSuffix(eDomain, domain) {
+		if strings.HasSuffix(eDomain, "."+domain) {
 			result[eDomain]++
 		}
 	}
