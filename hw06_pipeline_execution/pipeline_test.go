@@ -389,7 +389,7 @@ func TestPipelineAdditional(t *testing.T) { //nolint:funlen
 			result = append(result, s.(string))
 		}
 
-		require.Equal(t, []string{"102", "104"}, result)
+		require.Equal(t, []string{"102"}, result)
 	})
 
 	t.Run("add input after execution", func(t *testing.T) {

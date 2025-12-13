@@ -8,29 +8,35 @@ type (
 
 type Stage func(in In) (out Out)
 
+func drain(ch In) {
+	for range ch {} //nolint:all
+}
+
 func ExecutePipeline(in In, done In, stages ...Stage) Out {
-	for i := 0; i < len(stages); i++ {
-		// Свой выходной канал с возможностью закрытия
+	for _, stage := range stages {
+		stageOut := stage(in)
 		out := make(Bi)
 		go func(_in In, _out Bi) {
-			defer func() {
-				close(_out)
-				// Нам необходимо "докрутить" канал входных данных, так как только это откроет wg
-				for range _in {} //nolint:all
-			}()
+			defer close(_out)
 			for {
 				select {
 				case <-done:
+					go drain(_in)
 					return
 				case v, ok := <-_in:
 					if !ok {
 						return
 					}
-					_out <- v
+					select {
+					case <-done:
+						go drain(_in)
+						return
+					case _out <- v:
+					}
 				}
 			}
-		}(in, out)
-		in = stages[i](out)
+		}(stageOut, out)
+		in = out
 	}
 	return in
 }
