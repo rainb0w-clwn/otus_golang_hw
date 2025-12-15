@@ -1,0 +1,115 @@
+services:
+  db:
+    image: postgres
+    container_name: calendar-db
+    restart: always
+    environment:
+      POSTGRES_DB: otus_golang_hw_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d otus_golang_hw_test" ]
+      interval: 3s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    volumes:
+      - calendar-otus-pg-test:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq
+    container_name: calendar-rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 3s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5672:5672"
+    volumes:
+      - calendar-otus-rabbitmq-test:/var/lib/rabbitmq
+
+  calendar:
+    container_name: calendar-app
+    restart: always
+    build:
+      context: ../
+      dockerfile: ./build/calendar/Dockerfile
+    environment:
+      HTTP_HOST: 0.0.0.0
+      HTTP_PORT: 3000
+      GRPC_HOST: 0.0.0.0
+      GRPC_PORT: 50051
+      DB_DSN: "postgres://postgres:postgres@db:5432/otus_golang_hw_test"
+      DB_MIGRATIONS_DIR: "/app/migrations"
+      DB_MIGRATE: true
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/health" ]
+      interval: 3s
+      timeout: 2s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8888:3000"
+      - "50051:50051"
+
+  scheduler:
+    container_name: calendar-scheduler
+    restart: always
+    build:
+      context: ../
+      dockerfile: ./build/scheduler/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      DB_DSN: "postgres://postgres:postgres@db:5432/otus_golang_hw_test"
+      RMQ_HOST: rabbitmq
+      RMQ_PORT: 5672
+      RMQ_LOGIN: guest
+      RMQ_PASSWORD: guest
+      SCHEDULER_QUEUE_NAME: calendar_events
+
+  sender:
+    container_name: calendar-sender
+    restart: always
+    build:
+      context: ../
+      dockerfile: ./build/sender/Dockerfile
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RMQ_HOST: rabbitmq
+      RMQ_PORT: 5672
+      RMQ_LOGIN: guest
+      RMQ_PASSWORD: guest
+      SCHEDULER_QUEUE_NAME: calendar_events
+
+  test:
+    container_name: calendar-test
+    restart: no
+    build:
+      context: ../
+      dockerfile: ./build/test/Dockerfile
+    environment:
+      HTTP_PORT: 3000
+    depends_on:
+      db:
+        condition: service_healthy
+      calendar:
+        condition: service_healthy
+
+volumes:
+  calendar-otus-pg-test:
+  calendar-otus-rabbitmq-test:

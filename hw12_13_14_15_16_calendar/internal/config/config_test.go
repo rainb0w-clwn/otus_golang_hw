@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -32,7 +33,6 @@ rmq:
   password: "guest"
 scheduler:
   period: 60s
-  retentionPeriod: 60s
   queue: "calendar_events"
 `
 
@@ -56,8 +56,9 @@ func TestNewConfig(t *testing.T) {
 	require.Equal(t, "guest", cfg.RMQ.Login)
 	require.Equal(t, "guest", cfg.RMQ.Password)
 	require.Equal(t, 60*time.Second, cfg.Scheduler.Period)
-	require.Equal(t, 60*time.Second, cfg.Scheduler.RetentionPeriod)
+	require.Equal(t, 8760*time.Hour, cfg.Scheduler.RetentionPeriod) // Проверка default значения
 	require.Equal(t, "calendar_events", cfg.Scheduler.Queue)
+	require.Equal(t, false, cfg.DB.Migrate)
 }
 
 func TestConfigContext(t *testing.T) {
@@ -76,4 +77,27 @@ func TestNewConfig_InvalidYAML(t *testing.T) {
 	r := bytes.NewReader([]byte("invalid"))
 	_, err := New(r)
 	require.Error(t, err)
+}
+
+func TestEnv(t *testing.T) {
+	r := bytes.NewReader([]byte(yamlData))
+
+	err := os.Setenv("HTTP_HOST", "1.1.1.1")
+	require.NoError(t, err)
+	err = os.Setenv("DB_MIGRATE", "true")
+	require.NoError(t, err)
+	err = os.Setenv("DB_MIGRATIONS_DIR", "test")
+	require.NoError(t, err)
+	err = os.Setenv("SCHEDULER_PERIOD", "0s")
+	require.NoError(t, err)
+	err = os.Setenv("SCHEDULER_RETENTION_PERIOD", "1h")
+	require.NoError(t, err)
+
+	cfg, err := New(r)
+	require.NoError(t, err)
+	require.Equal(t, "1.1.1.1", cfg.HTTP.Host)
+	require.Equal(t, true, cfg.DB.Migrate)
+	require.Equal(t, "test", cfg.DB.MigrationsDir)
+	require.Equal(t, "3000", cfg.HTTP.Port)
+	require.Equal(t, time.Hour, cfg.Scheduler.RetentionPeriod)
 }

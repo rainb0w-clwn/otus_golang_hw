@@ -10,6 +10,7 @@ import (
 	proto "github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/api"
 	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/config"
 	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/logger"
+	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/server/http/health"
 	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/server/http/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -65,6 +66,13 @@ func (s *server) Start(ctx context.Context) error {
 		}
 	}
 	s.Handler = log.NewHandler(s.logger, mux)
+	err = mux.HandlePath("GET", "/health",
+		func(w http.ResponseWriter, r *http.Request, _ map[string]string) {
+			health.NewHandler()(w, r)
+		})
+	if err != nil {
+		return err
+	}
 
 	err = s.ListenAndServe()
 	if err != nil {

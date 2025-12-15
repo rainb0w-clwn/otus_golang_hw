@@ -29,6 +29,7 @@ type server struct {
 }
 
 type Application interface {
+	GetEvent(id string) (*entity.Event, error)
 	CreateEvent(event entity.Event) (string, error)
 	UpdateEvent(id string, event entity.Event) error
 	DeleteEvent(id string) error

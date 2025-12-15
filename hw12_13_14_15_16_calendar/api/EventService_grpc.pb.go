@@ -22,6 +22,7 @@ const (
 	EventService_CreateEvent_FullMethodName    = "/event.EventService/CreateEvent"
 	EventService_UpdateEvent_FullMethodName    = "/event.EventService/UpdateEvent"
 	EventService_DeleteEvent_FullMethodName    = "/event.EventService/DeleteEvent"
+	EventService_GetEvent_FullMethodName       = "/event.EventService/GetEvent"
 	EventService_GetDayEvents_FullMethodName   = "/event.EventService/GetDayEvents"
 	EventService_GetWeekEvents_FullMethodName  = "/event.EventService/GetWeekEvents"
 	EventService_GetMonthEvents_FullMethodName = "/event.EventService/GetMonthEvents"
@@ -34,6 +35,7 @@ type EventServiceClient interface {
 	CreateEvent(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*CreateResponse, error)
 	UpdateEvent(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*UpdateResponse, error)
 	DeleteEvent(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	GetEvent(ctx context.Context, in *EventId, opts ...grpc.CallOption) (*Event, error)
 	GetDayEvents(ctx context.Context, in *StartDate, opts ...grpc.CallOption) (*Events, error)
 	GetWeekEvents(ctx context.Context, in *StartDate, opts ...grpc.CallOption) (*Events, error)
 	GetMonthEvents(ctx context.Context, in *StartDate, opts ...grpc.CallOption) (*Events, error)
@@ -77,6 +79,16 @@ func (c *eventServiceClient) DeleteEvent(ctx context.Context, in *DeleteRequest,
 	return out, nil
 }
 
+func (c *eventServiceClient) GetEvent(ctx context.Context, in *EventId, opts ...grpc.CallOption) (*Event, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Event)
+	err := c.cc.Invoke(ctx, EventService_GetEvent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *eventServiceClient) GetDayEvents(ctx context.Context, in *StartDate, opts ...grpc.CallOption) (*Events, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Events)
@@ -114,6 +126,7 @@ type EventServiceServer interface {
 	CreateEvent(context.Context, *CreateRequest) (*CreateResponse, error)
 	UpdateEvent(context.Context, *UpdateRequest) (*UpdateResponse, error)
 	DeleteEvent(context.Context, *DeleteRequest) (*DeleteResponse, error)
+	GetEvent(context.Context, *EventId) (*Event, error)
 	GetDayEvents(context.Context, *StartDate) (*Events, error)
 	GetWeekEvents(context.Context, *StartDate) (*Events, error)
 	GetMonthEvents(context.Context, *StartDate) (*Events, error)
@@ -135,6 +148,9 @@ func (UnimplementedEventServiceServer) UpdateEvent(context.Context, *UpdateReque
 }
 func (UnimplementedEventServiceServer) DeleteEvent(context.Context, *DeleteRequest) (*DeleteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteEvent not implemented")
+}
+func (UnimplementedEventServiceServer) GetEvent(context.Context, *EventId) (*Event, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetEvent not implemented")
 }
 func (UnimplementedEventServiceServer) GetDayEvents(context.Context, *StartDate) (*Events, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetDayEvents not implemented")
@@ -220,6 +236,24 @@ func _EventService_DeleteEvent_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EventService_GetEvent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EventId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventServiceServer).GetEvent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventService_GetEvent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventServiceServer).GetEvent(ctx, req.(*EventId))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _EventService_GetDayEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(StartDate)
 	if err := dec(in); err != nil {
@@ -292,6 +326,10 @@ var EventService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteEvent",
 			Handler:    _EventService_DeleteEvent_Handler,
+		},
+		{
+			MethodName: "GetEvent",
+			Handler:    _EventService_GetEvent_Handler,
 		},
 		{
 			MethodName: "GetDayEvents",

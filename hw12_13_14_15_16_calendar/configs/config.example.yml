@@ -17,9 +17,8 @@ rmq:
   port: "5672"
   login: "guest"
   password: "guest"
-app:
-  scheduler:
-    period: 10s
-    retentionPeriod: 8760h
-    queue: "calendar_events"
+scheduler:
+  period: 10s
+  retentionPeriod: 8760h
+  queue: "calendar_events"
 storage: "db"

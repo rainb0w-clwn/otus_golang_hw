@@ -11,6 +11,7 @@ service EventService {
   rpc UpdateEvent(UpdateRequest) returns (UpdateResponse) {}
   rpc DeleteEvent(DeleteRequest) returns (DeleteResponse) {}
 
+  rpc GetEvent(EventId) returns (Event) {}
   rpc GetDayEvents(StartDate) returns (Events) {}
   rpc GetWeekEvents(StartDate) returns (Events) {}
   rpc GetMonthEvents(StartDate) returns (Events) {}
@@ -55,6 +56,7 @@ message EventData {
   google.protobuf.Timestamp remind_time = 6;
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;
+  google.protobuf.Timestamp remind_sent_time = 9;
 }
 
 message EventId {

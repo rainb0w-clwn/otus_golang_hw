@@ -3,7 +3,8 @@ BIN := "./bin/calendar"
 BIN_MIGRATE := "./bin/calendar_migrate"
 BIN_SENDER := "./bin/calendar_sender"
 BIN_SCHEDULER := "./bin/calendar_scheduler"
-DOCKER_IMG="calendar:develop"
+COMPOSE_FILE := "deployments/docker-compose.yml"
+INTEGRATION_COMPOSE_FILE := "deployments/docker-compose.integration.yml"
 CONFIG_PATH := "./configs/config.yml"
 
 GIT_HASH := $(shell git log --format="%h" -n 1)
@@ -12,13 +13,13 @@ LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%d
 generate: generate-proto generate-gateway
 
 generate-proto:
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative api/EventService.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative api/*.proto
 
 generate-gateway:
 	protoc --grpc-gateway_out=. --grpc-gateway_opt=paths=source_relative \
 		--grpc-gateway_opt=generate_unbound_methods=true \
 		--openapiv2_out=. --openapiv2_opt=generate_unbound_methods=true \
-		api/EventService.proto
+		api/*.proto
 
 build-migrations:
 	go build -v -o $(BIN_MIGRATE) ./cmd/migrations
@@ -46,14 +47,21 @@ run-sender: migrate-up build
 run-scheduler: migrate-up build
 	$(BIN_SCHEDULER) -config $(CONFIG_PATH)
 
-build-img:
-	docker build \
-		--build-arg=LDFLAGS="$(LDFLAGS)" \
-		-t $(DOCKER_IMG) \
-		-f build/Dockerfile .
+up:
+	docker compose -f $(COMPOSE_FILE) up
 
-run-img: build-img
-	docker run $(DOCKER_IMG)
+down:
+	docker compose -f $(COMPOSE_FILE) down
+
+reset-db:
+	docker compose -f ${INTEGRATION_COMPOSE_FILE} down --volumes
+	docker compose -f ${INTEGRATION_COMPOSE_FILE} up -d db rabbitmq
+
+integration-tests: reset-db
+	docker compose -f $(INTEGRATION_COMPOSE_FILE) up \
+		--abort-on-container-exit \
+		--exit-code-from test
+	docker compose -f ${INTEGRATION_COMPOSE_FILE} down --rmi local
 
 version: build
 	$(BIN) version
@@ -67,4 +75,4 @@ install-lint-deps:
 lint: install-lint-deps
 	golangci-lint run ./...
 
-.PHONY: build run build-img run-img version test lint
+.PHONY: build run run-sender run-scheduler version test lint generate generate-proto generate-gateway up down integration-tests

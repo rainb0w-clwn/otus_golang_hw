@@ -9,6 +9,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib" // driver import
 	"github.com/jmoiron/sqlx"
+	"github.com/pressly/goose/v3"
 	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/config"
 	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/entity"
 )
@@ -73,11 +74,16 @@ func (s *PgStorage) GetByID(id string) (*entity.Event, error) {
 		WHERE id = :id
 	`
 
+	stmt, err := s.db.PrepareNamedContext(s.ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
 	var se sqlEvent
-	err := s.db.GetContext(
+	err = stmt.GetContext(
 		s.ctx,
 		&se,
-		query,
 		map[string]any{"id": id},
 	)
 	if err != nil {
@@ -154,11 +160,16 @@ func (s *PgStorage) GetForPeriod(start time.Time, end time.Time) (*entity.Events
 		WHERE datetime BETWEEN :start AND :end
 	`
 
+	stmt, err := s.db.PrepareNamedContext(s.ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
 	var rows []sqlEvent
-	err := s.db.SelectContext(
+	err = stmt.SelectContext(
 		s.ctx,
 		&rows,
-		query,
 		map[string]any{
 			"start": start,
 			"end":   end,
@@ -283,6 +294,9 @@ func (s *PgStorage) Connect(ctx context.Context) error {
 
 	s.db = db
 	s.ctx = ctx
+	if cfg.DB.Migrate {
+		return s.migrate(cfg.DB.MigrationsDir)
+	}
 	return nil
 }
 
@@ -317,6 +331,25 @@ func (s *PgStorage) sqlEventToEvent(se *sqlEvent) *entity.Event {
 	if se.RemindTime.Valid {
 		e.RemindTime = se.RemindTime.Time
 	}
+	if se.RemindTime.Valid {
+		e.RemindSentTime = se.RemindSentTime.Time
+	}
 
 	return e
+}
+
+func (s *PgStorage) migrate(migrationDir string) error {
+	if s.db == nil {
+		return fmt.Errorf("database connection is not established")
+	}
+
+	if err := goose.SetDialect("pgx"); err != nil {
+		return fmt.Errorf("failed to set dialect: %w", err)
+	}
+
+	if err := goose.Up(s.db.DB, migrationDir); err != nil {
+		return fmt.Errorf("failed to apply migrations: %w", err)
+	}
+
+	return nil
 }
