@@ -375,17 +375,18 @@ func (x *Event) GetEventData() *EventData {
 }
 
 type EventData struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	DateTime      *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=date_time,json=dateTime,proto3" json:"date_time,omitempty"`
-	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	Duration      string                 `protobuf:"bytes,5,opt,name=duration,proto3" json:"duration,omitempty"`
-	RemindTime    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=remind_time,json=remindTime,proto3" json:"remind_time,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	UserId         int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Title          string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	DateTime       *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=date_time,json=dateTime,proto3" json:"date_time,omitempty"`
+	Description    string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	Duration       string                 `protobuf:"bytes,5,opt,name=duration,proto3" json:"duration,omitempty"`
+	RemindTime     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=remind_time,json=remindTime,proto3" json:"remind_time,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	RemindSentTime *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=remind_sent_time,json=remindSentTime,proto3" json:"remind_sent_time,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *EventData) Reset() {
@@ -470,6 +471,13 @@ func (x *EventData) GetCreatedAt() *timestamppb.Timestamp {
 func (x *EventData) GetUpdatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *EventData) GetRemindSentTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RemindSentTime
 	}
 	return nil
 }
@@ -585,7 +593,7 @@ const file_api_EventService_proto_rawDesc = "" +
 	"\x05Event\x12)\n" +
 	"\bevent_id\x18\x01 \x01(\v2\x0e.event.EventIdR\aeventId\x12/\n" +
 	"\n" +
-	"event_data\x18\x02 \x01(\v2\x10.event.EventDataR\teventData\"\xe4\x02\n" +
+	"event_data\x18\x02 \x01(\v2\x10.event.EventDataR\teventData\"\xaa\x03\n" +
 	"\tEventData\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\x03R\x06userId\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x127\n" +
@@ -597,16 +605,18 @@ const file_api_EventService_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x19\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12D\n" +
+	"\x10remind_sent_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\x0eremindSentTime\"\x19\n" +
 	"\aEventId\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"F\n" +
 	"\tStartDate\x129\n" +
 	"\n" +
-	"start_date\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\tstartDate2\xe4\x02\n" +
+	"start_date\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\tstartDate2\x90\x03\n" +
 	"\fEventService\x12<\n" +
 	"\vCreateEvent\x12\x14.event.CreateRequest\x1a\x15.event.CreateResponse\"\x00\x12<\n" +
 	"\vUpdateEvent\x12\x14.event.UpdateRequest\x1a\x15.event.UpdateResponse\"\x00\x12<\n" +
-	"\vDeleteEvent\x12\x14.event.DeleteRequest\x1a\x15.event.DeleteResponse\"\x00\x121\n" +
+	"\vDeleteEvent\x12\x14.event.DeleteRequest\x1a\x15.event.DeleteResponse\"\x00\x12*\n" +
+	"\bGetEvent\x12\x0e.event.EventId\x1a\f.event.Event\"\x00\x121\n" +
 	"\fGetDayEvents\x12\x10.event.StartDate\x1a\r.event.Events\"\x00\x122\n" +
 	"\rGetWeekEvents\x12\x10.event.StartDate\x1a\r.event.Events\"\x00\x123\n" +
 	"\x0eGetMonthEvents\x12\x10.event.StartDate\x1a\r.event.Events\"\x00BEZCgithub.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/protob\x06proto3"
@@ -651,24 +661,27 @@ var file_api_EventService_proto_depIdxs = []int32{
 	11, // 9: event.EventData.remind_time:type_name -> google.protobuf.Timestamp
 	11, // 10: event.EventData.created_at:type_name -> google.protobuf.Timestamp
 	11, // 11: event.EventData.updated_at:type_name -> google.protobuf.Timestamp
-	11, // 12: event.StartDate.start_date:type_name -> google.protobuf.Timestamp
-	0,  // 13: event.EventService.CreateEvent:input_type -> event.CreateRequest
-	1,  // 14: event.EventService.UpdateEvent:input_type -> event.UpdateRequest
-	2,  // 15: event.EventService.DeleteEvent:input_type -> event.DeleteRequest
-	10, // 16: event.EventService.GetDayEvents:input_type -> event.StartDate
-	10, // 17: event.EventService.GetWeekEvents:input_type -> event.StartDate
-	10, // 18: event.EventService.GetMonthEvents:input_type -> event.StartDate
-	3,  // 19: event.EventService.CreateEvent:output_type -> event.CreateResponse
-	4,  // 20: event.EventService.UpdateEvent:output_type -> event.UpdateResponse
-	5,  // 21: event.EventService.DeleteEvent:output_type -> event.DeleteResponse
-	6,  // 22: event.EventService.GetDayEvents:output_type -> event.Events
-	6,  // 23: event.EventService.GetWeekEvents:output_type -> event.Events
-	6,  // 24: event.EventService.GetMonthEvents:output_type -> event.Events
-	19, // [19:25] is the sub-list for method output_type
-	13, // [13:19] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	11, // 12: event.EventData.remind_sent_time:type_name -> google.protobuf.Timestamp
+	11, // 13: event.StartDate.start_date:type_name -> google.protobuf.Timestamp
+	0,  // 14: event.EventService.CreateEvent:input_type -> event.CreateRequest
+	1,  // 15: event.EventService.UpdateEvent:input_type -> event.UpdateRequest
+	2,  // 16: event.EventService.DeleteEvent:input_type -> event.DeleteRequest
+	9,  // 17: event.EventService.GetEvent:input_type -> event.EventId
+	10, // 18: event.EventService.GetDayEvents:input_type -> event.StartDate
+	10, // 19: event.EventService.GetWeekEvents:input_type -> event.StartDate
+	10, // 20: event.EventService.GetMonthEvents:input_type -> event.StartDate
+	3,  // 21: event.EventService.CreateEvent:output_type -> event.CreateResponse
+	4,  // 22: event.EventService.UpdateEvent:output_type -> event.UpdateResponse
+	5,  // 23: event.EventService.DeleteEvent:output_type -> event.DeleteResponse
+	7,  // 24: event.EventService.GetEvent:output_type -> event.Event
+	6,  // 25: event.EventService.GetDayEvents:output_type -> event.Events
+	6,  // 26: event.EventService.GetWeekEvents:output_type -> event.Events
+	6,  // 27: event.EventService.GetMonthEvents:output_type -> event.Events
+	21, // [21:28] is the sub-list for method output_type
+	14, // [14:21] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_api_EventService_proto_init() }

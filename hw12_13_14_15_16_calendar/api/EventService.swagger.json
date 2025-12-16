@@ -112,6 +112,38 @@
         ]
       }
     },
+    "/event.EventService/GetEvent": {
+      "post": {
+        "operationId": "EventService_GetEvent",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/eventEvent"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/eventEventId"
+            }
+          }
+        ],
+        "tags": [
+          "EventService"
+        ]
+      }
+    },
     "/event.EventService/GetMonthEvents": {
       "post": {
         "operationId": "EventService_GetMonthEvents",
@@ -277,6 +309,10 @@
           "format": "date-time"
         },
         "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "remindSentTime": {
           "type": "string",
           "format": "date-time"
         }

@@ -166,3 +166,16 @@ func (a App) MarkEventAsReminded(id string) error {
 	}
 	return nil
 }
+
+func (a App) GetEvent(id string) (*entity.Event, error) {
+	event, err := a.Storage.GetByID(
+		id,
+	)
+	if err != nil {
+		a.Logger.Error(err.Error())
+
+		return nil, err
+	}
+
+	return event, nil
+}

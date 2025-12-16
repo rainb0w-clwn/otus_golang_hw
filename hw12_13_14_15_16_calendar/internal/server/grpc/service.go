@@ -91,6 +91,17 @@ func (s Service) GetDayEvents(_ context.Context, date *proto.StartDate) (*proto.
 	return s.entities2Proto(events), nil
 }
 
+func (s Service) GetEvent(_ context.Context, req *proto.EventId) (*proto.Event, error) {
+	event, err := s.app.GetEvent(req.GetId())
+	if err != nil {
+		s.logger.Error(err.Error())
+
+		return nil, err
+	}
+
+	return s.entity2Proto(event), nil
+}
+
 func (s Service) entities2Proto(entityEvents *entity.Events) *proto.Events {
 	protoEvents := make([]*proto.Event, 0, len(*entityEvents))
 
@@ -108,13 +119,15 @@ func (s Service) entity2Proto(entityEvent *entity.Event) *proto.Event {
 	return &(proto.Event{
 		EventId: &proto.EventId{Id: entityEvent.ID},
 		EventData: &proto.EventData{
-			Title:       entityEvent.Title,
-			DateTime:    timestamppb.New(entityEvent.DateTime),
-			Description: entityEvent.Description,
-			Duration:    entityEvent.Duration,
-			RemindTime:  timestamppb.New(entityEvent.RemindTime),
-			CreatedAt:   timestamppb.New(entityEvent.CreatedAt),
-			UpdatedAt:   timestamppb.New(entityEvent.CreatedAt),
+			UserId:         int64(entityEvent.UserID),
+			Title:          entityEvent.Title,
+			DateTime:       timestamppb.New(entityEvent.DateTime),
+			Description:    entityEvent.Description,
+			Duration:       entityEvent.Duration,
+			RemindTime:     timestamppb.New(entityEvent.RemindTime),
+			CreatedAt:      timestamppb.New(entityEvent.CreatedAt),
+			UpdatedAt:      timestamppb.New(entityEvent.CreatedAt),
+			RemindSentTime: timestamppb.New(entityEvent.RemindSentTime),
 		},
 	})
 }
