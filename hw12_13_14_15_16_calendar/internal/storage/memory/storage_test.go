@@ -18,7 +18,7 @@ var (
 		DateTime:    now,
 		Description: "this is some event",
 		Duration:    "60",
-		RemindTime:  "15",
+		RemindTime:  time.Now().Add(-time.Hour * 2),
 		CreatedAt:   now,
 		UpdatedAt:   now,
 		UserID:      1,

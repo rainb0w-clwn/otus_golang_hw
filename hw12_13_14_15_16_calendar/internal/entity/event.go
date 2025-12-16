@@ -15,7 +15,7 @@ type Event struct {
 	DateTime    time.Time
 	Description string
 	Duration    string
-	RemindTime  string
+	RemindTime  time.Time
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 

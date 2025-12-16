@@ -5,6 +5,10 @@ http:
   port: 3000
   readTimeout: 1s
   writeTimeout: 1s
+grpc:
+  host: "0.0.0.0"
+  port: 50051
+  connectTimeout: 1s
 db:
   dsn: "postgres://postgres:postgres@0.0.0.0:5432/db"
   migrationsDir: "./migrations/"

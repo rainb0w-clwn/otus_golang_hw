@@ -41,7 +41,7 @@ func TestCreateEvent(t *testing.T) {
 		Description: "this is event 1",
 		DateTime:    dateTime,
 		Duration:    "02:00:00",
-		RemindTime:  "00:15:00",
+		RemindTime:  dateTime.Add(-time.Minute * 15),
 		UserID:      1,
 	}
 	id1, err := app.CreateEvent(event)
@@ -58,7 +58,7 @@ func TestCreateEvent(t *testing.T) {
 			Description: "this is event 2",
 			DateTime:    dateTime,
 			Duration:    "03:00:00",
-			RemindTime:  "00:30:00",
+			RemindTime:  dateTime.Add(-time.Minute * 15),
 			UserID:      1,
 		},
 	)
@@ -73,7 +73,7 @@ func TestUpdateEvent(t *testing.T) {
 		Description: "this is event 1",
 		DateTime:    dateTime.AddDate(0, 0, -1),
 		Duration:    "02:00:00",
-		RemindTime:  "00:15:00",
+		RemindTime:  dateTime.Add(-time.Minute * 15),
 		UserID:      1,
 	}
 
@@ -116,7 +116,7 @@ func TestDeleteEvent(t *testing.T) {
 			Description: "this is event 1",
 			DateTime:    dateTime.Add(-time.Hour * 24),
 			Duration:    "02:00:00",
-			RemindTime:  "00:15:00",
+			RemindTime:  dateTime.Add(-time.Minute * 15),
 			UserID:      1,
 		},
 	)
@@ -130,7 +130,7 @@ func TestDeleteEvent(t *testing.T) {
 			Description: "this is event 2",
 			DateTime:    dateTime,
 			Duration:    "03:00:00",
-			RemindTime:  "00:30:00",
+			RemindTime:  dateTime.Add(-time.Minute * 15),
 			UserID:      1,
 		},
 	)
