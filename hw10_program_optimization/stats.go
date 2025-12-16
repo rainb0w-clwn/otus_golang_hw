@@ -1,65 +1,63 @@
 package hw10programoptimization
 
 import (
-	"encoding/json"
-	"fmt"
+	"bufio"
+	"bytes"
 	"io"
-	"regexp"
 	"strings"
+
+	"github.com/mailru/easyjson"
 )
 
 type User struct {
-	ID       int
-	Name     string
-	Username string
-	Email    string
-	Phone    string
-	Password string
-	Address  string
+	Email string
 }
 
 type DomainStat map[string]int
 
 func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
-	u, err := getUsers(r)
-	if err != nil {
-		return nil, fmt.Errorf("get users error: %w", err)
-	}
-	return countDomains(u, domain)
-}
-
-type users [100_000]User
-
-func getUsers(r io.Reader) (result users, err error) {
-	content, err := io.ReadAll(r)
-	if err != nil {
-		return
-	}
-
-	lines := strings.Split(string(content), "\n")
-	for i, line := range lines {
-		var user User
-		if err = json.Unmarshal([]byte(line), &user); err != nil {
-			return
-		}
-		result[i] = user
-	}
-	return
-}
-
-func countDomains(u users, domain string) (DomainStat, error) {
 	result := make(DomainStat)
-
-	for _, user := range u {
-		matched, err := regexp.Match("\\."+domain, []byte(user.Email))
+	domain = strings.ToLower(domain)
+	br := bufio.NewReader(r)
+	var user User
+	for {
+		line, isPrefix, err := br.ReadLine()
+		if isPrefix {
+			buf := append([]byte{}, line...)
+			for isPrefix {
+				var extra []byte
+				extra, isPrefix, err = br.ReadLine()
+				buf = append(buf, extra...)
+			}
+			line = buf
+		}
 		if err != nil {
+			if err == io.EOF {
+				break
+			}
 			return nil, err
 		}
 
-		if matched {
-			num := result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])]
-			num++
-			result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])] = num
+		if bytes.IndexByte(line, 0x40) == -1 {
+			continue
+		}
+
+		if err := easyjson.Unmarshal(line, &user); err != nil {
+			return nil, err
+		}
+		if user.Email == "" {
+			continue
+		}
+
+		at := strings.IndexByte(user.Email, '@')
+		if at <= 0 || at == len(user.Email)-1 {
+			continue
+		}
+
+		eDomain := strings.ToLower(user.Email[at+1:])
+
+		if strings.HasSuffix(eDomain, "."+domain) {
+			result[eDomain]++
 		}
 	}
 	return result, nil
