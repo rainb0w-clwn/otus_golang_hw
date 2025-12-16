@@ -3,13 +3,13 @@
 # Get branch name and description
 BRANCH_NAME=$(git branch | grep '*' | sed 's/* //')
 
-cd $BRANCH_NAME || { echo "no dir with name $BRANCH_NAME"; exit 127; }
-
-if [[ "$BRANCH_NAME" =~ "calendar" ]]; then
+if [[ "$BRANCH_NAME" =~ "_calendar" ]]; then
+  cd "hw12_13_14_15_16_calendar"
   make lint
   make build
   make test
 else
+  cd $BRANCH_NAME || { echo "no dir with name $BRANCH_NAME"; exit 127; }
   golangci-lint run --fix
   go test -v -count=1 -race -timeout=1m ./...
   if [[ "hw10_program_optimization" =~ "$BRANCH_NAME" ]]; then

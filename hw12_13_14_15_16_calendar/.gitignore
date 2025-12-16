@@ -1,2 +1,4 @@
 logs/
 bin/
+configs/*.yml
+!configs/*.example.yml
