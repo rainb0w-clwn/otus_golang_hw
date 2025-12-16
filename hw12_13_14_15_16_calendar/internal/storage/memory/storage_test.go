@@ -114,7 +114,7 @@ func TestStorageRead(t *testing.T) {
 	})
 
 	t.Run("read for day", func(t *testing.T) {
-		strg := NewWithEvents(map[string]entity.Event{
+		strg := NewWithEvents(map[string]*entity.Event{
 			"1": {ID: "1", Title: "1", DateTime: initialDate, UserID: 1},
 			"2": {ID: "2", Title: "2", DateTime: initialDate.Add(time.Hour * 2), UserID: 1},
 			"3": {ID: "3", Title: "3", DateTime: initialDate.Add(-time.Hour * 2), UserID: 1},
@@ -138,7 +138,7 @@ func TestStorageRead(t *testing.T) {
 	})
 
 	t.Run("read for week", func(t *testing.T) {
-		str := NewWithEvents(map[string]entity.Event{
+		str := NewWithEvents(map[string]*entity.Event{
 			"1": {ID: "1", Title: "1", DateTime: initialDate, UserID: 1},
 			"2": {ID: "2", Title: "2", DateTime: initialDate.Add(time.Hour * 24 * 10), UserID: 1},
 			"3": {ID: "3", Title: "3", DateTime: initialDate.Add(-time.Hour * 24 * 10), UserID: 1},
@@ -155,7 +155,7 @@ func TestStorageRead(t *testing.T) {
 	})
 
 	t.Run("read for month", func(t *testing.T) {
-		str := NewWithEvents(map[string]entity.Event{
+		str := NewWithEvents(map[string]*entity.Event{
 			"1": {ID: "1", Title: "1", DateTime: initialDate, UserID: 1},
 			"2": {ID: "2", Title: "2", DateTime: initialDate.Add(time.Hour * 24 * 30), UserID: 1},
 			"3": {ID: "3", Title: "3", DateTime: initialDate.Add(time.Hour * 24 * 10), UserID: 1},
@@ -170,6 +170,39 @@ func TestStorageRead(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, *events, 3)
 		require.Equal(t, []string{"1", "3", "4"}, getKeys(t, events))
+	})
+
+	t.Run("read for remind", func(t *testing.T) {
+		now := time.Now().UTC()
+		date := now.Add(time.Hour * 5)
+		strg := NewWithEvents(map[string]*entity.Event{
+			"1": {ID: "1", Title: "1", DateTime: date, UserID: 1, RemindTime: now},
+			"2": {ID: "2", Title: "2", DateTime: date, UserID: 1, RemindTime: now.Add(time.Hour * 1)},
+			"3": {ID: "3", Title: "3", DateTime: date, UserID: 1, RemindTime: now.Add(-time.Hour * 1)},
+			"4": {ID: "4", Title: "4", DateTime: date, UserID: 1, RemindTime: now.Add(-time.Hour * 1), RemindSentTime: now},
+		})
+
+		events, err := strg.GetForRemind()
+
+		require.NoError(t, err)
+		require.Len(t, *events, 2)
+		require.Equal(t, []string{"1", "3"}, getKeys(t, events))
+	})
+
+	t.Run("mark as reminded", func(t *testing.T) {
+		now := time.Now().Add(-time.Millisecond).UTC()
+		date := now
+		event := entity.Event{
+			ID: "1", Title: "1", DateTime: date, UserID: 1, RemindTime: now,
+		}
+		strg := NewWithEvents(map[string]*entity.Event{
+			"1": &event,
+		})
+
+		err := strg.MarkAsReminded(event.ID)
+		require.NoError(t, err)
+		require.False(t, event.RemindSentTime.IsZero())
+		require.Less(t, event.RemindTime, event.RemindSentTime)
 	})
 }
 

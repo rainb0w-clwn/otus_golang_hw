@@ -1,6 +1,8 @@
 GOLANGCI_LINT_VERSION=v1.63.4
 BIN := "./bin/calendar"
-BIN_MIGRATE := "./bin/migrate"
+BIN_MIGRATE := "./bin/calendar_migrate"
+BIN_SENDER := "./bin/calendar_sender"
+BIN_SCHEDULER := "./bin/calendar_scheduler"
 DOCKER_IMG="calendar:develop"
 CONFIG_PATH := "./configs/config.yml"
 
@@ -32,9 +34,17 @@ migrate-down: build-migrations
 
 build:
 	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/calendar
+	go build -v -o $(BIN_SENDER) -ldflags "$(LDFLAGS)" ./cmd/sender
+	go build -v -o $(BIN_SCHEDULER) -ldflags "$(LDFLAGS)" ./cmd/scheduler
 
 run: migrate-up build
 	$(BIN) -config $(CONFIG_PATH)
+
+run-sender: migrate-up build
+	$(BIN_SENDER) -config $(CONFIG_PATH)
+
+run-scheduler: migrate-up build
+	$(BIN_SCHEDULER) -config $(CONFIG_PATH)
 
 build-img:
 	docker build \

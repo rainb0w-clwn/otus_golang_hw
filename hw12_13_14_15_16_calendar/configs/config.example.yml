@@ -10,6 +10,16 @@ grpc:
   port: 50051
   connectTimeout: 1s
 db:
-  dsn: "postgres://postgres:postgres@0.0.0.0:5432/db"
+  dsn: "postgres://postgres:postgres@0.0.0.0:5432/otus_golang_hw"
   migrationsDir: "./migrations/"
-storage: "memory"
+rmq:
+  host: "0.0.0.0"
+  port: "5672"
+  login: "guest"
+  password: "guest"
+app:
+  scheduler:
+    period: 10s
+    retentionPeriod: 8760h
+    queue: "calendar_events"
+storage: "db"

@@ -2,15 +2,11 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
-	"time"
 
 	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/app"
 	common "github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/app/_common"
@@ -19,6 +15,7 @@ import (
 	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/server"
 	serverGRPC "github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/server/grpc"
 	serverHTTP "github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/server/http"
+	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/service/calendar"
 	"github.com/rainb0w-clwn/otus_golang_hw/hw12_13_14_15_calendar/internal/storage"
 )
 
@@ -71,6 +68,8 @@ func run() int {
 		return 1
 	}
 
+	application := app.New(logg, st)
+
 	srv := server.New(
 		server.Options{
 			GRPC: serverGRPC.Options{
@@ -86,52 +85,16 @@ func run() int {
 			},
 		},
 		logg,
-		app.New(logg, st),
+		application,
 	)
 
-	wg := sync.WaitGroup{}
-	wg.Add(3)
-	go func() {
-		defer wg.Done()
+	service := calendar.New(srv, logg)
 
-		logg.Info("GRPC server starting...")
-		err := (*srv.GRPC).Start(ctx)
-		if err != nil {
-			logg.Error("Failed to start GRPC server: " + err.Error())
-			cancel()
-		}
-	}()
-	go func() {
-		defer wg.Done()
-
-		logg.Info("HTTP server starting...")
-		err := (*srv.HTTP).Start(ctx)
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logg.Error("Failed to start HTTP server: " + err.Error())
-			cancel()
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		<-ctx.Done()
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-		defer cancel()
-
-		logg.Info("GRPC server stopping...")
-		if err := (*srv.GRPC).Stop(ctx); err != nil {
-			logg.Error("Failed to stop GRPC server: " + err.Error())
-		}
-
-		logg.Info("HTTP server stopping...")
-		if err := (*srv.HTTP).Stop(ctx); err != nil {
-			logg.Error("Failed to stop HTTP server: " + err.Error())
-		}
-
-		logg.Info("Calendar stopped")
-	}()
-
-	wg.Wait()
+	err = service.Run(ctx)
+	if err != nil {
+		logg.Error("Error starting calendar: %v", err)
+		return 1
+	}
 
 	return 0
 }

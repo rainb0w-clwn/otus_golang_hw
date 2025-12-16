@@ -36,7 +36,19 @@ type Config struct {
 		Dsn           string `yaml:"dsn"`
 		MigrationsDir string `yaml:"migrationsDir"`
 	} `yaml:"db"`
-	Storage string `yaml:"storage"`
+	Storage   string `yaml:"storage"`
+	App       struct{}
+	Scheduler struct {
+		Period          time.Duration `yaml:"period"`
+		Queue           string        `yaml:"queue"`
+		RetentionPeriod time.Duration `yaml:"retentionPeriod"`
+	} `yaml:"scheduler"`
+	RMQ struct {
+		Host     string `yaml:"host"`
+		Port     string `yaml:"port"`
+		Login    string `yaml:"login"`
+		Password string `yaml:"password"`
+	} `yaml:"rmq"`
 }
 
 func New(r io.Reader) (*Config, error) {
