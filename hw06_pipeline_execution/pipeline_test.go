@@ -1,6 +1,7 @@
 package hw06pipelineexecution
 
 import (
+	"runtime"
 	"strconv"
 	"sync"
 	"testing"
@@ -145,6 +146,295 @@ func TestAllStageStop(t *testing.T) {
 		wg.Wait()
 
 		require.Len(t, result, 0)
+	})
+}
 
+//nolint:gocognit
+func TestPipelineAdditional(t *testing.T) { //nolint:funlen
+	t.Run("no stages", func(t *testing.T) {
+		in := make(Bi)
+		data := []int{1, 2, 3, 4, 5}
+
+		go func() {
+			for _, v := range data {
+				in <- v
+			}
+			close(in)
+		}()
+
+		result := make([]int, 0, 5)
+		start := time.Now()
+		for s := range ExecutePipeline(in, nil, []Stage{}...) {
+			result = append(result, s.(int))
+		}
+		elapsed := time.Since(start)
+
+		require.Equal(t, data, result)
+		require.Less(t,
+			int64(elapsed),
+			int64(fault)*int64(1))
+	})
+
+	t.Run("no input", func(t *testing.T) {
+		in := make(Bi)
+
+		g := func(_ string, f func(v interface{}) interface{}) Stage {
+			return func(in In) Out {
+				out := make(Bi)
+				go func() {
+					defer close(out)
+					for v := range in {
+						time.Sleep(sleepPerStage)
+						out <- f(v)
+					}
+				}()
+				return out
+			}
+		}
+
+		stages := []Stage{
+			g("Dummy", func(v interface{}) interface{} { return v }),
+			g("Multiplier (* 2)", func(v interface{}) interface{} { return v.(int) * 2 }),
+			g("Adder (+ 100)", func(v interface{}) interface{} { return v.(int) + 100 }),
+			g("Stringifier", func(v interface{}) interface{} { return strconv.Itoa(v.(int)) }),
+		}
+
+		go func() {
+			close(in)
+		}()
+
+		result := make([]string, 0)
+		start := time.Now()
+		for s := range ExecutePipeline(in, nil, stages...) {
+			result = append(result, s.(string))
+		}
+		elapsed := time.Since(start)
+
+		require.Len(t, result, 0)
+		require.Less(t,
+			int64(elapsed),
+			int64(fault)*int64(1))
+	})
+
+	t.Run("Fast & Furious", func(t *testing.T) {
+		in := make(Bi)
+		n := 10000
+		data := make([]int, n)
+		for i := 0; i < n; i++ {
+			data[i] = i
+		}
+
+		g := func(_ string, f func(v interface{}) interface{}) Stage {
+			return func(in In) Out {
+				out := make(Bi)
+				go func() {
+					defer close(out)
+					for v := range in {
+						out <- f(v)
+					}
+				}()
+				return out
+			}
+		}
+
+		stages := []Stage{
+			g("Multiplier (* 2)", func(v interface{}) interface{} { return v.(int) * 2 }),
+			g("Divider (/ 2)", func(v interface{}) interface{} { return v.(int) / 2 }),
+		}
+
+		go func() {
+			for _, v := range data {
+				in <- v
+			}
+			close(in)
+		}()
+
+		result := make([]int, 0, n)
+		start := time.Now()
+		for s := range ExecutePipeline(in, nil, stages...) {
+			result = append(result, s.(int))
+		}
+		elapsed := time.Since(start)
+
+		require.Equal(t, data, result)
+		require.Less(t,
+			int64(elapsed),
+			int64(len(stages)+len(data)-1)+int64(fault))
+	})
+
+	t.Run("goroutines freed", func(t *testing.T) {
+		in := make(Bi)
+		data := []int{1, 2, 3, 4, 5}
+
+		g := func(_ string, f func(v interface{}) interface{}) Stage {
+			return func(in In) Out {
+				out := make(Bi)
+				go func() {
+					defer close(out)
+					for v := range in {
+						time.Sleep(sleepPerStage)
+						out <- f(v)
+					}
+				}()
+				return out
+			}
+		}
+
+		stages := []Stage{
+			g("Dummy", func(v interface{}) interface{} { return v }),
+			g("Multiplier (* 2)", func(v interface{}) interface{} { return v.(int) * 2 }),
+			g("Adder (+ 100)", func(v interface{}) interface{} { return v.(int) + 100 }),
+			g("Stringifier", func(v interface{}) interface{} { return strconv.Itoa(v.(int)) }),
+		}
+
+		goroutinesBefore := runtime.NumGoroutine()
+		go func() {
+			for _, v := range data {
+				in <- v
+			}
+			close(in)
+		}()
+
+		result := make([]string, 0, 5)
+		for s := range ExecutePipeline(in, nil, stages...) {
+			_ = append(result, s.(string))
+		}
+		goroutinesAfter := runtime.NumGoroutine()
+
+		require.Equal(t, goroutinesBefore, goroutinesAfter)
+	})
+
+	t.Run("done case without signal", func(t *testing.T) {
+		in := make(Bi)
+		done := make(Bi)
+		data := []int{1, 2, 3, 4, 5}
+
+		g := func(_ string, f func(v interface{}) interface{}) Stage {
+			return func(in In) Out {
+				out := make(Bi)
+				go func() {
+					defer close(out)
+					for v := range in {
+						time.Sleep(sleepPerStage)
+						out <- f(v)
+					}
+				}()
+				return out
+			}
+		}
+
+		stages := []Stage{
+			g("Dummy", func(v interface{}) interface{} { return v }),
+			g("Multiplier (* 2)", func(v interface{}) interface{} { return v.(int) * 2 }),
+			g("Adder (+ 100)", func(v interface{}) interface{} { return v.(int) + 100 }),
+			g("Stringifier", func(v interface{}) interface{} { return strconv.Itoa(v.(int)) }),
+		}
+
+		go func() {
+			for _, v := range data {
+				in <- v
+			}
+			close(in)
+		}()
+
+		result := make([]string, 0, 10)
+		for s := range ExecutePipeline(in, done, stages...) {
+			result = append(result, s.(string))
+		}
+
+		require.Equal(t, []string{"102", "104", "106", "108", "110"}, result)
+	})
+
+	t.Run("done case with output", func(t *testing.T) {
+		in := make(Bi)
+		done := make(Bi)
+		data := []int{1, 2, 3, 4, 5}
+
+		g := func(_ string, f func(v interface{}) interface{}) Stage {
+			return func(in In) Out {
+				out := make(Bi)
+				go func() {
+					defer close(out)
+					for v := range in {
+						time.Sleep(sleepPerStage)
+						out <- f(v)
+					}
+				}()
+				return out
+			}
+		}
+
+		stages := []Stage{
+			g("Dummy", func(v interface{}) interface{} { return v }),
+			g("Multiplier (* 2)", func(v interface{}) interface{} { return v.(int) * 2 }),
+			g("Adder (+ 100)", func(v interface{}) interface{} { return v.(int) + 100 }),
+			g("Stringifier", func(v interface{}) interface{} { return strconv.Itoa(v.(int)) }),
+		}
+
+		abortDur := sleepPerStage*time.Duration(len(stages)) + fault
+		go func() {
+			<-time.After(abortDur)
+			close(done)
+		}()
+
+		go func() {
+			for _, v := range data {
+				in <- v
+			}
+			close(in)
+		}()
+
+		result := make([]string, 0, 5)
+		for s := range ExecutePipeline(in, done, stages...) {
+			result = append(result, s.(string))
+		}
+
+		require.Equal(t, []string{"102"}, result)
+	})
+
+	t.Run("add input after execution", func(t *testing.T) {
+		in := make(Bi)
+		done := make(Bi)
+		data := []int{1, 2, 3, 4, 5}
+
+		g := func(_ string, f func(v interface{}) interface{}) Stage {
+			return func(in In) Out {
+				out := make(Bi)
+				go func() {
+					defer close(out)
+					for v := range in {
+						time.Sleep(sleepPerStage)
+						out <- f(v)
+					}
+				}()
+				return out
+			}
+		}
+
+		stages := []Stage{
+			g("Dummy", func(v interface{}) interface{} { return v }),
+			g("Multiplier (* 2)", func(v interface{}) interface{} { return v.(int) * 2 }),
+			g("Adder (+ 100)", func(v interface{}) interface{} { return v.(int) + 100 }),
+			g("Stringifier", func(v interface{}) interface{} { return strconv.Itoa(v.(int)) }),
+		}
+
+		go func() {
+			for _, v := range data {
+				in <- v
+			}
+		}()
+
+		go func() {
+			<-time.After(sleepPerStage * time.Duration(len(stages)+len(data)-1))
+			in <- 6
+			close(in)
+		}()
+
+		result := make([]string, 0, 10)
+		for s := range ExecutePipeline(in, done, stages...) {
+			result = append(result, s.(string))
+		}
+
+		require.Equal(t, []string{"102", "104", "106", "108", "110", "112"}, result)
 	})
 }
