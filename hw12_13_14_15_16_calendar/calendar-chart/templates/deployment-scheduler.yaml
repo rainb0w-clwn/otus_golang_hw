@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calendar-scheduler
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: calendar-scheduler
+  template:
+    metadata:
+      labels:
+        app: calendar-scheduler
+    spec:
+      containers:
+        - name: scheduler
+          image: "{{ .Values.scheduler.image.repository }}:{{ .Values.scheduler.image.tag }}"
+          imagePullPolicy: {{ .Values.scheduler.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: calendar-config
+            - secretRef:
+                name: calendar-secrets
+          env:
+            - name: DB_MIGRATE
+              value: "false"

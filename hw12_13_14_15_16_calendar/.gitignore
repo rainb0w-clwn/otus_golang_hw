@@ -2,3 +2,4 @@ logs/
 bin/
 configs/*.yml
 !configs/*.example.yml
+**/charts/*.tgz

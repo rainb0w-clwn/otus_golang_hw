@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: calendar-config
+  namespace: "{{ .Values.namespace }}"
+data:
+  DB_DSN: "postgresql://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@{{ .Values.postgres.host }}:{{ .Values.postgres.port }}/{{ .Values.postgres.database }}?sslmode=disable"
+  DB_MIGRATIONS_DIR: "{{ .Values.postgres.migrationsDir }}"
+  DB_MIGRATE: "{{ .Values.postgres.migrate }}"
+  LOG_LEVEL: "{{ .Values.logLevel }}"
+
+  RMQ_HOST: "{{ .Values.rabbit.host }}"
+  RMQ_PORT: "{{ .Values.rabbit.port }}"
+  RMQ_LOGIN: "{{ .Values.rabbit.login }}"
+  RABBIT_VHOST: "{{ .Values.rabbit.vhost }}"
