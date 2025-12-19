@@ -29,3 +29,6 @@
 /.github/
 /.gitlab-ci.yml
 /Dockerfile
+
+Chart.lock
+calendar-chart/

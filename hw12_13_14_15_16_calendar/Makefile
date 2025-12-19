@@ -75,4 +75,53 @@ install-lint-deps:
 lint: install-lint-deps
 	golangci-lint run ./...
 
+CHART_DIR = calendar-chart
+RELEASE_NAME = calendar
+NAMESPACE = calendar
+APP_PORT = 3000
+INGRESS_PORT = 80
+
+helm-upgrade:
+	helm dependency build $(CHART_DIR)
+	helm upgrade --install $(RELEASE_NAME) $(CHART_DIR) --namespace $(NAMESPACE) --create-namespace
+	kubectl rollout restart deployment -n calendar
+
+helm-install:
+	helm install calendar ./calendar-chart --namespace calendar --create-namespace
+
+helm-dependency:
+	helm dependency build ./calendar-chart
+
+helm-dependency-update:
+	helm dependency update ./calendar-chart
+
+# === Kubernetes ===
+
+k8s-pods:
+	kubectl get pods -A
+
+k8s-services:
+	kubectl get svc -A
+
+k8s-get-all:
+	kubectl get all -A
+
+k8s-logs:
+	kubectl logs -f deployment/$(RELEASE_NAME)-api -n $(NAMESPACE)
+
+k8s-logs-scheduler:
+	kubectl logs -f deployment/$(RELEASE_NAME)-scheduler -n $(NAMESPACE)
+
+k8s-logs-sender:
+	kubectl logs -f deployment/$(RELEASE_NAME)-sender -n $(NAMESPACE)
+
+port-forward:
+	kubectl port-forward deployment/calendar-api 3000 -n calendar
+
+k8s-describe-nodes:
+	kubectl describe nodes
+
+k8s-check-services:
+	kubectl get services -n calendar
+
 .PHONY: build run run-sender run-scheduler version test lint generate generate-proto generate-gateway up down integration-tests

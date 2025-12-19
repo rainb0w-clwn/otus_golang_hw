@@ -1,0 +1,60 @@
+namespace: calendar
+
+api:
+  image:
+    repository: calendar-api
+    tag: latest
+    pullPolicy: IfNotPresent
+
+scheduler:
+  image:
+    repository: calendar-scheduler
+    tag: latest
+    pullPolicy: IfNotPresent
+
+sender:
+  image:
+    repository: calendar-sender
+    tag: latest
+    pullPolicy: IfNotPresent
+
+postgres:
+  host: calendar-postgresql
+  port: 5432
+  user: postgres
+  password: postgres
+  database: calendar
+  migrationsDir: /app/migrations
+  migrate: true
+
+rabbit:
+  host: calendar-rabbitmq
+  port: 5672
+  login: guest
+  password: guest
+  vhost: /
+
+postgresql:
+  auth:
+    username: postgres
+    password: postgres
+    database: calendar
+  primary:
+    persistence:
+      enabled: false
+
+rabbitmq:
+  auth:
+    enabled: true
+    username: guest
+    password: guest
+    erlangCookie: secretcookie
+
+ingress:
+  enabled: true
+  host: calendar.local
+  path: /
+  tls: false
+
+logLevel: true
+

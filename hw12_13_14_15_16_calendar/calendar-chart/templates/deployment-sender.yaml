@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calendar-sender
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: calendar-sender
+  template:
+    metadata:
+      labels:
+        app: calendar-sender
+    spec:
+      containers:
+        - name: sender
+          image: "{{ .Values.sender.image.repository }}:{{ .Values.sender.image.tag }}"
+          imagePullPolicy: {{ .Values.sender.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: calendar-config
+            - secretRef:
+                name: calendar-secrets

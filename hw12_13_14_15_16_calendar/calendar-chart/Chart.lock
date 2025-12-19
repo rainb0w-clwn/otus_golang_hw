@@ -1,0 +1,9 @@
+dependencies:
+- name: postgresql
+  repository: oci://registry-1.docker.io/bitnamicharts
+  version: 18.1.13
+- name: rabbitmq
+  repository: oci://registry-1.docker.io/cloudpirates
+  version: 0.10.1
+digest: sha256:33cba7e8706ac094b34324df5def0598efa5ef69d8bbb90044eba48d36c2ba1d
+generated: "2025-12-20T00:28:47.628149+03:00"
